@@ -1,80 +1,31 @@
 pipeline {
     agent any
-
     environment {
         DOCKER_HUB = "nasir1999"
-        APP_NAME   = "food-delivery-app"
+        APP_NAME = "payment-app"
     }
-
     stages {
+        stage('Build Artifact') {
 
-        stage('Checkout') {
             steps {
-                checkout scm
+                sh "chmod +x mvnw"
+                sh "./mvnw clean package -DskipTests"
             }
         }
-
-        stage('Install & Build') {
+    stage('Docker Build & Push') {
             steps {
-                sh '''
-                echo "Node version:"
-                /usr/bin/node -v
-
-                echo "NPM version:"
-                /usr/bin/npm -v
-
-                echo "Installing dependencies..."
-                /usr/bin/npm install
-
-                echo "Building Angular app..."
-                /usr/bin/npm run build
-                '''
+                script {
+                    docker.withRegistry('', 'docker-creds') {
+                        def img = docker.build("${DOCKER_HUB}/${APP_NAME}")
+                        img.push('latest')
+                    }
+                }
             }
         }
-
-        stage('Docker Build & Push') {
-            environment {
-                DOCKER_USER = credentials('DOCKER_USER')
-                DOCKER_PASS = credentials('DOCKER_PASS')
-            }
+    stage('Deploy') {
             steps {
-                sh '''
-                echo "Building Docker image..."
-                docker build -t ${DOCKER_HUB}/${APP_NAME}:latest .
-
-                echo "Logging in to Docker Hub..."
-                echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-
-                echo "Pushing Docker image..."
-                docker push ${DOCKER_HUB}/${APP_NAME}:latest
-                '''
-            }
-        }
-
-        stage('Deploy') {
-            steps {
-                sh '''
-                echo "Stopping old container (if exists)..."
-                docker stop ${APP_NAME} || true
-                docker rm ${APP_NAME} || true
-
-                echo "Starting new container..."
-                docker run -d \
-                  --name ${APP_NAME} \
-                  -p 80:80 \
-                  ${DOCKER_HUB}/${APP_NAME}:latest
-                '''
+                sh "docker stop ${APP_NAME} || true && docker rm ${APP_NAME} || true"
+                sh "docker run -d --name ${APP_NAME} -p 8081:8081 ${DOCKER_HUB}/${APP_NAME}:latest"
             }
         }
     }
-
-    post {
-        success {
-            echo "✅ Frontend deployed successfully!"
-        }
-        failure {
-            echo "❌ Pipeline failed. Check logs above."
-        }
-    }
-}
-
