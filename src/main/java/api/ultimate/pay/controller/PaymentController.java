@@ -1,6 +1,5 @@
 package api.ultimate.pay.controller;
 
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,14 +15,14 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api/payments")
 @RequiredArgsConstructor
-@CrossOrigin("*")
+//@CrossOrigin("*")
 public class PaymentController {
 
 	private final PaymentService paymentService;
 
     @PostMapping("/create-order")
     public String createOrder(@RequestBody OrderRequest request) throws Exception {
-    	System.out.println("testing ..........");
+    	System.out.println("testing >>>>>>");
         Order order = paymentService.createOrder(request);
         return order.toString();
     }
